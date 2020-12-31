@@ -8,14 +8,14 @@ import java.util.Map;
 
 public abstract class Node {
 
-	protected int index;
+	int index;
 
-	protected Map<Integer, Integer> DV;
-	protected Map<Integer, Integer> directCost;
-	protected Map<Integer, Map<Integer, Integer>> neighborDV;
-	protected Map<Integer, Socket> sockets;
+	Map<Integer, Integer> DV;
+	Map<Integer, Integer> directCost;
+	Map<Integer, Map<Integer, Integer>> neighborDV;
+	Map<Integer, Socket> sockets;
 
-	protected Node( int index ) throws Exception {
+	Node( int index ) throws Exception {
 		directCost = new HashMap<>();
 		DV = new HashMap<>();
 		neighborDV = new HashMap<>();
@@ -27,29 +27,56 @@ public abstract class Node {
 			new Thread( new DVReaderThread( this, e.getKey() ) ).start();
 	}
 
-	protected abstract void rinit() throws Exception;
-
-	protected void sendDVToNeighbors() throws IOException {
-		for ( Map.Entry<Integer, Socket> i : sockets.entrySet() ) {
-			DataOutputStream temp = new DataOutputStream( i.getValue().getOutputStream() );
-			Gson gson = new Gson();
-			temp.writeUTF( gson.toJson( DV ) );
-		}
+	void rinit() throws Exception {
+		initDirectCost();
+		initDV();
+		initNeighborDV();
+		initSockets();
+		sendDVToNeighbors();
+		System.out.println( "DV After rinit in node " + this.index + ": " + (new Gson()).toJson( this.DV ) );
 	}
 
-	protected void initNeighborDV() {
-		for ( int i = 0; i < 4; i++ ) {
-			if ( i == this.index ) continue;
-			neighborDV.put( i, new HashMap<Integer, Integer>() );
-			for (int j = 0; j < 4; j++) {
-				neighborDV.get(i).put(j, Integer.MAX_VALUE);
+	void rUpdate( Packet pkt ) throws Exception {
+		boolean flag = false;
+		synchronized ( this ) {
+			this.neighborDV.replace( pkt.source, pkt.DV );
+			for ( int i = 0; i < 4; i++ ) {
+				int previousValue = this.DV.get( i );
+				for ( Map.Entry<Integer, Map<Integer, Integer>> e : neighborDV.entrySet() ) {
+					int v = e.getKey();
+					int temp = (int) Math.min( Integer.MAX_VALUE, (long) directCost.getOrDefault( v, Integer.MAX_VALUE ) + e.getValue().get( i ) );
+					this.DV.replace( i, Math.min( this.DV.get( i ), temp ) );
+				}
+				System.out.println( "DV After update in node " + this.index + ": " + (new Gson()).toJson( this.DV ) );
+				if ( previousValue > this.DV.get( i ) )
+					flag = true;
+			}
+		}
+		if ( flag )
+			sendDVToNeighbors();
+	}
+
+	void sendDVToNeighbors() throws IOException {
+		Packet pkt = new Packet();
+		pkt.source = this.index;
+		for ( Map.Entry<Integer, Socket> i : sockets.entrySet() ) {
+			pkt.destination = i.getKey();
+			synchronized (this) {
+				pkt.DV = DV;
+				DataOutputStream temp = new DataOutputStream(i.getValue().getOutputStream());
+				Gson gson = new Gson();
+				temp.writeUTF(gson.toJson(pkt));
 			}
 		}
 	}
 
-	protected void initDV() {
+	void initDV() {
 		for ( int i = 0; i < 4; i++ )
 			DV.put( i, directCost.getOrDefault( i, Integer.MAX_VALUE ) );
 	}
+
+	protected abstract void initNeighborDV();
+	protected abstract void initSockets() throws IOException;
+	protected abstract void initDirectCost();
 
 }

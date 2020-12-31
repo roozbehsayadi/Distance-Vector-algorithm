@@ -2,6 +2,8 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.DataInputStream;
+import java.io.EOFException;
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.Socket;
 import java.util.HashMap;
@@ -19,22 +21,40 @@ public class DVReaderThread implements Runnable {
 		this.dis = new DataInputStream( node.sockets.get( socketIndex ).getInputStream() );
 	}
 
-	private void rUpdate( Map<Integer, Integer> neighborDV ) {
-	}
-
 	@Override
 	public void run() {
-		try {
-			Gson gson = new Gson();
-			while (true) {
-				String temp = this.dis.readUTF();
-				Type type = new TypeToken<HashMap<Integer, Integer>>(){}.getType();
-				Map<Integer, Integer> neighborDV = gson.fromJson( temp, type );
-				rUpdate( neighborDV );
+		Gson gson = new Gson();
+		while ( true ) {
+			String temp = null;
+			try {
+				temp = this.dis.readUTF();
+			} catch (EOFException e) {
+				System.out.println( "A socket is closed unexpectedly. Exiting..." );
+				System.exit( 1 );
+			}catch (IOException e) {
+				e.printStackTrace();
+				continue;
 			}
-		} catch ( Exception e ) {
-			System.out.println( "Error in readUTF" );
-			System.exit( 1 );
+//			System.out.println( temp );
+			Packet pkt = gson.fromJson( temp, Packet.class );
+			try {
+				node.rUpdate( pkt );
+			} catch (Exception e) {
+				System.out.println( "Exception in rUpdate" + e );
+				System.exit( 1 );
+			}
 		}
+//		try {
+//			Gson gson = new Gson();
+//			while (true) {
+//				String temp = this.dis.readUTF();
+//				System.out.println( temp );
+//				Packet pkt = gson.fromJson( temp, Packet.class );
+//				node.rUpdate( pkt );
+//			}
+//		} catch ( Exception e ) {
+//			System.out.println( e );
+//			System.exit( 1 );
+//		}
 	}
 }
