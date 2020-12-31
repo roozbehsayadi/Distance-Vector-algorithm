@@ -23,6 +23,8 @@ public abstract class Node {
 		this.index = index;
 
 		rinit();
+		for ( Map.Entry<Integer, Socket> e : sockets.entrySet() )
+			new Thread( new DVReaderThread( this, e.getKey() ) ).start();
 	}
 
 	protected abstract void rinit() throws Exception;
