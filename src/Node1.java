@@ -42,7 +42,7 @@ public class Node1 extends Node {
 	}
 
 	public static void main(String[] args) throws Exception {
-		Node1 node = new Node1();
+		new Node1();
 	}
 
 }

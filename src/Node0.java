@@ -1,13 +1,8 @@
-import com.google.gson.Gson;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 public class Node0 extends Node {
@@ -45,7 +40,7 @@ public class Node0 extends Node {
 	}
 
 	public static void main(String[] args) throws Exception {
-		Node0 node = new Node0();
+		new Node0();
 	}
 
 }
